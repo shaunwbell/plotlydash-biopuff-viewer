@@ -57,8 +57,8 @@ def serve_layout():
                 children=[
                 ddk.CardHeader(title="ADCP Location Analysis"),
                 ddk.Graph(
-                    id="graph-adcp",
-                    figure=adcpfig,
+                    id="loc-map",
+                    figure=map_figures,
             ),
             html.Br(),
                 ],
