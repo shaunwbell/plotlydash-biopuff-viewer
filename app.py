@@ -39,7 +39,7 @@ def serve_layout():
         return fig
 
     try:
-        new_df = get_data()
+        new_df = db.get_data()
         locmap = map_figures(new_df)
     except:
         locmap = empty_figures()
