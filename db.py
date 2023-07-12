@@ -52,8 +52,7 @@ def test_selection():
 def exists():
     try:
         df = test_selection()
-    except Exception as e:
-        print(e)
+    except:
         return False
 
     if df is not None:
@@ -82,3 +81,5 @@ def get_locations():
         "SELECT * FROM {};".format(constants.locations_table), constants.postgres_engine
     )
     return updated_df
+
+exists()
