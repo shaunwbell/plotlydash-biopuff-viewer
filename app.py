@@ -68,35 +68,32 @@ def serve_layout():
                 ]
             ),
             ddk.Card(
-                width=100,                
+                width=50,
                 children=[
                 ddk.CardHeader(title="Unit Location Analysis"),
                 ddk.Graph(
+                    style={'height': '700px'},
                     id="graph-map",
                     figure=locmap,
             )]),
-            html.Br(),
             ddk.Card(
-                width=100,                
+                width=50,                
                 children=[
                 ddk.CardHeader(title="Timeseries Temperature 0 Analysis"),
                 ddk.Graph(
+                    style={'height': '200px'},
                     id="graph-timeseries_T1",
                     figure=timefig_T1,
-            )]),
-            ddk.Card(
-                width=100,                
-                children=[
+            ),
                 ddk.CardHeader(title="Timeseries Temperature 1 Analysis"),
                 ddk.Graph(
+                    style={'height': '200px'},
                     id="graph-timeseries_T2",
                     figure=timefig_T2,
-            )]),
-            ddk.Card(
-                width=100,                
-                children=[
+            ),              
                 ddk.CardHeader(title="Timeseries Pressure Analysis"),
                 ddk.Graph(
+                    style={'height': '200px'},
                     id="graph-timeseries_P",
                     figure=timefig_P,
             )]),
