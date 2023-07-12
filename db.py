@@ -81,5 +81,3 @@ def get_locations():
         "SELECT * FROM {};".format(constants.locations_table), constants.postgres_engine
     )
     return updated_df
-
-exists()
