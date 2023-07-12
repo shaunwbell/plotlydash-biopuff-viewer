@@ -81,3 +81,6 @@ def get_locations():
         "SELECT * FROM {};".format(constants.locations_table), constants.postgres_engine
     )
     return updated_df
+
+df = get_data()
+print(df.columns)

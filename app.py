@@ -58,7 +58,7 @@ def serve_layout():
                 ddk.CardHeader(title="Unit Location Analysis"),
                 ddk.Graph(
                     id="graph-map",
-                    figure=map_figures,
+                    figure=locmap,
             )]),
         ],
         theme=theme,
