@@ -3,6 +3,7 @@ import redis
 from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
 import os
+from urllib.parse import urlparse
 
 meta_variables = ['longitude', 'latitude', 'trajectory_id', 'time',]
 surface_variables = ['Temp_DegC_0','Temp_DegC_1','Pressure_Bar',]
