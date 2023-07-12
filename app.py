@@ -5,20 +5,18 @@ import pandas as pd
 
 from dash import Dash, html
 import dash_design_kit as ddk
+import plotly.express as px
 
 import db
 
 import tasks
 from theme import theme
 
+
 app = Dash(__name__)
 server = app.server  # expose server variable for Procfile
 
-df = db.get_counts()
-print(df)
-
-def serve_layout():
-    
+def serve_layout():    
 
     def map_figures(df):
         fig = px.scatter_geo(df, lat='latitude', lon='longitude',
@@ -28,6 +26,7 @@ def serve_layout():
                         projection_rotation=dict(lon=200, lat=50, roll=0),
                         lataxis_range=[52,72.5], lonaxis_range=[180,240])
         fig.update_layout(height=300, margin={"r":0,"t":0,"l":0,"b":0})
+        
         return fig
 
     def empty_figures():
@@ -62,8 +61,10 @@ def serve_layout():
                     figure=adcpfig,
             ),
             html.Br(),
-        ],
-        theme=theme,
+                ],
+                theme=theme,
+            )
+        ]
     )
 
 
