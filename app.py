@@ -19,7 +19,7 @@ server = app.server  # expose server variable for Procfile
 def serve_layout():    
 
     def map_figures(df):
-        fig = px.scatter_geo(df, lat='latitude', lon='longitude',
+        fig = px.scatter_geo(df, lat='latitude', lon='longitude', hover_data=['text_time','latitue','longitude'],
                             hover_name="trajectory_id", projection='orthographic', color='trajectory_id'
                             )
         fig.update_geos(resolution=50,lataxis_showgrid=True, lonaxis_showgrid=True,
@@ -38,12 +38,20 @@ def serve_layout():
 
         return fig
 
+    def time_figures(df,varname='Temp_DegC_0'):
+        fig = px.scatter(df, x='time', y=varname,
+                     hover_name="trajectory_id", projection='orthographic', color='trajectory_id'
+                     )
+        return fig
+
     try:
         new_df = db.get_data()
         locmap = map_figures(new_df)
+        timefig_T1 = time_figures(new_df,varname='Temp_DegC_0')
     except:
         locmap = empty_figures()
 
+        
     return ddk.App(
         [
             ddk.Header(
@@ -59,6 +67,15 @@ def serve_layout():
                 ddk.Graph(
                     id="graph-map",
                     figure=locmap,
+            )]),
+            html.Br(),
+            ddk.Card(
+                width=50,                
+                children=[
+                ddk.CardHeader(title="Timeseries Temperature Analysis"),
+                ddk.Graph(
+                    id="graph-timeseries_T1",
+                    figure=timefig_T1,
             )]),
         ],
         theme=theme,
