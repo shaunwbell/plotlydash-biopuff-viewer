@@ -62,9 +62,9 @@ def serve_layout():
             ),
             html.Br(),
                 ],
-                theme=theme,
             )
         ]
+        theme=theme,
     )
 
 
