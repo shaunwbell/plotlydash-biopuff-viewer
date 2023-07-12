@@ -49,21 +49,18 @@ def serve_layout():
             ddk.Header(
                 [
                     ddk.Logo(src=app.get_asset_url("logo.png")),
-                    ddk.Title("Periodic Updates on Time Series Data"),
+                    ddk.Title("Interactive ITAE/EcoFOCI Active PopUP Dashboard (QC'd) "),
                 ]
             ),
-            ddk.Card(                
-                width=50,                
+            ddk.Card(
+                width=100,                
                 children=[
-                ddk.CardHeader(title="ADCP Location Analysis"),
+                ddk.CardHeader(title="Unit Location Analysis"),
                 ddk.Graph(
-                    id="loc-map",
+                    id="graph-map",
                     figure=map_figures,
-            ),
-            html.Br(),
-                ],
-            )
-        ]
+            )]),
+        ],
         theme=theme,
     )
 
