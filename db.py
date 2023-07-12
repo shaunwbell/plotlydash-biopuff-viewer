@@ -29,7 +29,7 @@ def get_between_days_ago(ago1, ago2):
     return stored_df
 
 
-def get_data(platform):
+def get_data():
     # In this function, we retrieve the data from postgres using pandas's read_sql method.
 
     # This data is periodically getting updated via a separate Celery Process in tasks.py.

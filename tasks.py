@@ -42,7 +42,6 @@ def load_observations():
         #url = 'https://data.pmel.noaa.gov/pmel/erddap/tabledap/osmc_rt_60.csv?' + constants.all_variables_comma_separated + '&time>=2022-08-01T00:00:00Z'
         #url = 'https://data.pmel.noaa.gov/pmel/erddap/tabledap/osmc_rt_60.csv?' + constants.all_variables_comma_separated
         url = f'http://ecofoci-field.pmel.noaa.gov:8080/erddap/tabledap/2023_KU_BioPUFFS_surfacedata.csv?{constants.all_variables_comma_separated}%26time%3E%3Dnow-180days'
-        print(url)
         logger.info('Reading data from ' + url)
 
         df = pd.read_csv(url, skiprows=[1], dtype=constants.dtypes, parse_dates=True)
