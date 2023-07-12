@@ -40,7 +40,7 @@ def serve_layout():
 
     def time_figures(df,varname='Temp_DegC_0'):
         fig = px.scatter(df, x='time', y=varname,
-                     hover_name="trajectory_id", projection='orthographic', color='trajectory_id'
+                     hover_name="trajectory_id", color='trajectory_id'
                      )
         return fig
 
@@ -50,6 +50,7 @@ def serve_layout():
         timefig_T1 = time_figures(new_df,varname='Temp_DegC_0')
     except:
         locmap = empty_figures()
+        timefig_T1 = None
 
         
     return ddk.App(
