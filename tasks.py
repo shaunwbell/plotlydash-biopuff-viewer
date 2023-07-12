@@ -1,92 +1,165 @@
-import datetime
 import os
+import redis
 import pandas as pd
+import numpy as np
+import json
 from celery import Celery
 from celery.schedules import crontab
-import numpy as np
-from sqlalchemy import create_engine
-from sqlalchemy.pool import NullPool
-from constants import dataset_table
-from urllib.parse import urlparse
 
-# We define our celery broker. REDIS_URL is generated automatically on Dash Enterprise
-# when your app is linked to a Redis Database
-# If the app is running on Workspaces, we connect to the same Redis instance as the deployed app but a different Redis
-# database
-if os.environ.get("DASH_ENTERPRISE_ENV") == "WORKSPACE":
-    parsed_url = urlparse(os.environ.get("REDIS_URL"))
-    if parsed_url.path == "" or parsed_url.path == "/":
-        i = 0
-    else:
-        try:
-            i = int(parsed_url.path[1:])
-        except:
-            raise Exception("Redis database should be a number")
-    parsed_url = parsed_url._replace(path="/{}".format((i + 1) % 16))
+from celery.utils.log import get_task_logger
 
-    updated_url = parsed_url.geturl()
-    REDIS_URL = "redis://%s" % (updated_url.split("://")[1])
-else:
-    REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379")
+from random import randrange
 
-celery_app = Celery(
-    "Celery App", broker=REDIS_URL
-)
+import constants
+import db
 
-# Create a SQLAlchemy connection string from the environment variable `DATABASE_URL`
-# automatically created in your dash app when it is linked to a postgres container
-# on Dash Enterprise. If you're running locally and `DATABASE_URL` is not defined,
-# then this will fall back to a connection string for a local postgres instance
-#  with username='postgres' and password='password'
-connection_string = "postgresql+pg8000" + os.environ.get(
-    "DATABASE_URL", "postgresql://postgres:password@127.0.0.1:5432"
-).lstrip("postgresql")
+logger = get_task_logger(__name__)
 
+celery_app = Celery('tasks', broker=os.environ.get("REDIS_URL", "redis://127.0.0.1:6379"))
 
-# Create a SQLAlchemy engine object. This object initiates a connection pool
-# so we create it once here and import into app.py.
-# `poolclass=NullPool` prevents the Engine from using any connection more than once. You'll find more info here:
-# https://docs.sqlalchemy.org/en/14/core/pooling.html#using-connection-pools-with-multiprocessing-or-os-fork
-postgres_engine = create_engine(connection_string, poolclass=NullPool)
 
 @celery_app.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
-
-    # This command invokes a celery task at an interval of every 5 seconds. You can change this.
-    sender.add_periodic_task(5, update_data.s(), name="Update data")
-
-    # Replace and overwrite this table every Monday at 7:30 am using df.to_sql's `if_exists` argument
-    # so that this randomly generated data doesn't grow out of control.
     sender.add_periodic_task(
-        crontab(minute=30, hour="7", day_of_week=1),
-        update_data.s(if_exists="replace"),
-        name="Reset data",
+         crontab(minute='45'),
+         load_observations.s(),
+         name='Initial Load of Observations'
     )
+    sender.add_periodic_task(
+         crontab(minute='45'),
+         append_new_observations.s(),
+         name='Append New Observations'
+    )
+    sender.add_periodic_task(
+         crontab(hour='1'),
+         trim_database.s(),
+         name='Delete observations older than 365 days'
+    )
+
+@celery_app.task
+def load_observations():
+    if not db.exists():
+        #url = 'https://data.pmel.noaa.gov/pmel/erddap/tabledap/osmc_rt_60.csv?' + constants.all_variables_comma_separated + '&time>=2022-08-01T00:00:00Z'
+        #url = 'https://data.pmel.noaa.gov/pmel/erddap/tabledap/osmc_rt_60.csv?' + constants.all_variables_comma_separated
+        url = 'http://ecofoci-field.pmel.noaa.gov:8080/erddap/tabledap/2023_KU_BioPUFFS_surfacedata.csv?' + constants.all_variables_comma_separated + '&time>=now-180days'
+
+        logger.info('Reading data from ' + url)
+
+        df = pd.read_csv(url, skiprows=[1], dtype=constants.dtypes, parse_dates=True)
+
+        df = df.dropna(subset=['latitude','longitude'], how='any')
+        df = df.query('-90.0 <= latitude <= 90')
+        df = df.sort_values('time')
+        df.reset_index(drop=True, inplace=True)
+        df.loc[:,'millis'] = pd.to_datetime(df['time']).view(np.int64)
+        df.loc[:,'text_time'] = df['time'].astype(str)
+        df.loc[:,'trace_text'] = df['trajectory_id'] 
+
+        logger.info('Preparing sub-sets for locations and counts.')
+        locations_df = df.groupby('trajectory_id', as_index=False).last()
+
+        counts_df = df.groupby('trajectory_id').count()
+        counts_df.reset_index(inplace=True)
+
+        logger.info('Found ' + str(df.shape[0]) + ' observations to store.')
+
+        # In the following command, we are saving the updated new data to the dataset_table using pandas
+        # and the SQLAlchemy engine we created above. When if_exists='append' we add the rows to our table
+        # and when if_exists='replace', a new table overwrites the old one.
+        logger.info('Updating data...')
+        df.to_sql(constants.data_table, constants.postgres_engine, if_exists='replace', index=False, chunksize=1500, method='multi')
+        logger.info('Updating counts...')
+        counts_df.to_sql(constants.counts_table, constants.postgres_engine, if_exists='replace', index=False)
+        logger.info('Updating locations...')
+        locations_df.to_sql(constants.locations_table, constants.postgres_engine, if_exists='replace', index=False)
+    else:
+        logger.info('Database already exists. Updates will come from periodic tasks.')
 
 
 @celery_app.task
-def update_data(if_exists="append"):
+def trim_database():
+    db.trim(365)
 
-    # create a list of strings representing the last five seconds
-    dates = []
-    for i in range(5):
-        new_date = datetime.datetime.now() + datetime.timedelta(seconds=-i)
-        dates.append(new_date.strftime("%Y-%m-%d %H:%M:%S"))
-    dates.reverse()
 
-    # Set a new random seed. Otherwise the seed from the pre-forked process will be used
-    # by the celery worker (so we'd always get the same 5 random numbers).
-    np.random.seed()
-    random_values = np.random.randn(5)
+@celery_app.task
+def append_new_observations():
+    # url = 'https://data.pmel.noaa.gov/pmel/erddap/tabledap/osmc_rt_60.csv?' + constants.all_variables_comma_separated + '&time>=2022-08-01T00:00:00Z'
+    # url = 'https://data.pmel.noaa.gov/pmel/erddap/tabledap/osmc_rt_60.csv?' + constants.all_variables_comma_separated
+    # url = 'https://data.pmel.noaa.gov/pmel/erddap/tabledap/osmc_rt_60.csv?' + constants.all_variables_comma_separated + '&time>=now-14days'
+    url = 'http://ecofoci-field.pmel.noaa.gov:8080/erddap/tabledap/2023_KU_BioPUFFS_surfacedata.csv?' + constants.all_variables_comma_separated + '&time>=now-14days'
+    
+    logger.info('Reading data from ' + url)
 
-    # In this example, we're just supplying random data to demonstrate that the data has changed.
-    # But in practice, you can use this function to query real time data from APIs, databases, or
-    # long running models.
-    df = pd.DataFrame({"time": dates, "value": random_values})
+    df = pd.read_csv(url, skiprows=[1], dtype=constants.dtypes, parse_dates=True)
+    
+    df = df.dropna(subset=['latitude','longitude'], how='any')
+    df = df.query('-90.0 <= latitude <= 90')
+    df = df.sort_values('time')
+    df.reset_index(drop=True, inplace=True)
+    df.loc[:,'millis'] = pd.to_datetime(df['time']).view(np.int64)
+    df.loc[:,'text_time'] = df['time'].astype(str)
+    df.loc[:,'trace_text'] = df['trajectory_id']
+    columns = df.columns
+    df = df.assign(source='erddap')
+    logger.info('read ' + str(df.shape[0]) + ' potential new observations')
+    
+    for days in range(0,9):
+        ago1 = 45-((days+1)*5)
+        ago2 = 45-(days*5)
+        logger.info('checking for duplicates in days: ' + str(ago1) + ' to ' + str(ago2) + ' ago.' )
+        stored_df = db.get_between_days_ago(ago1, ago2)
+        stored_df = stored_df.assign(source='db')
+        logger.info(str(stored_df.shape[0]) + ' obervations found in database.')
+        df = pd.concat([stored_df, df])
+        df.reset_index(inplace=True, drop=True)
+        PRECISION = 3
+        df.drop(df[['latitude', 'longitude','millis']].round(PRECISION).duplicated().loc[lambda latitude: latitude].index, inplace=True)
+        df = df[df['source']=='erddap']
+        logger.info(str(df.shape[0]) + ' observations that are not stored remain after checking this day range.')
+
+    df = df[columns]
+    df = df.dropna(subset=['latitude','longitude'], how='any')
+    df = df.query('-90.0 <= latitude <= 90')
+    df = df.sort_values('time')
+    df.reset_index(drop=True, inplace=True)
+    logger.info('First row=')
+    logger.info(df.iloc[0])
+    logger.info('Last row=')
+    logger.info(df.iloc[-1])
+    logger.info('Found ' + str(df.shape[0]) + ' new observations to append.')
+
 
     # In the following command, we are saving the updated new data to the dataset_table using pandas
     # and the SQLAlchemy engine we created above. When if_exists='append' we add the rows to our table
     # and when if_exists='replace', a new table overwrites the old one.
-    df.to_sql(dataset_table, postgres_engine, if_exists=if_exists, index=False)
+    logger.info('Updating data...')
+    if df.shape[0] > 0:
+        df.to_sql(constants.data_table, constants.postgres_engine, if_exists='append', index=False, chunksize=1500, method='multi')
 
-    return
+    # These are small and should be made to match the data in the database, so replace them
+    df = db.get_data(None)
+    logger.info('Preparing sub-sets for locations and counts.')
+    locations_df = df.groupby('trajectory_id', as_index=False).last()
+
+    counts_df = df.groupby('trajectory_id').count()
+    counts_df.reset_index(inplace=True)
+
+    logger.info('Updating counts...')
+    counts_df.to_sql(constants.counts_table, constants.postgres_engine, if_exists='replace', index=False)
+    logger.info('Updating locations...')
+    locations_df.to_sql(constants.locations_table, constants.postgres_engine, if_exists='replace', index=False)
+
+    
+@celery_app.task
+def counts_and_location():
+    df = db.get_data(None)
+    logger.info('Preparing sub-sets for locations and counts.')
+    locations_df = df.groupby('trajectory_id', as_index=False).last()
+
+    counts_df = df.groupby('trajectory_id').count()
+    counts_df.reset_index(inplace=True)
+
+    logger.info('Updating counts...')
+    counts_df.to_sql(constants.counts_table, constants.postgres_engine, if_exists='replace', index=False)
+    logger.info('Updating locations...')
+    locations_df.to_sql(constants.locations_table, constants.postgres_engine, if_exists='replace', index=False)
