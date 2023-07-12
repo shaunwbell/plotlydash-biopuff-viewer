@@ -19,7 +19,7 @@ server = app.server  # expose server variable for Procfile
 def serve_layout():    
 
     def map_figures(df):
-        fig = px.scatter_geo(df, lat='latitude', lon='longitude', hover_data=['text_time','latitue','longitude'],
+        fig = px.scatter_geo(df, lat='latitude', lon='longitude', hover_data=['text_time'],
                             hover_name="trajectory_id", projection='orthographic', color='trajectory_id'
                             )
         fig.update_geos(resolution=50,lataxis_showgrid=True, lonaxis_showgrid=True,
@@ -47,12 +47,18 @@ def serve_layout():
     try:
         new_df = db.get_data()
         locmap = map_figures(new_df)
-        timefig_T1 = time_figures(new_df,varname='Temp_DegC_0')
     except:
         locmap = empty_figures()
-        timefig_T1 = None
 
-        
+    try:
+        timefig_T1 = time_figures(new_df,varname='Temp_DegC_0')
+        timefig_T2 = time_figures(new_df,varname='Temp_DegC_1')
+        timefig_P = time_figures(new_df,varname='Pressure_Bar')
+    except:
+        timefig_T1 = None
+        timefig_T2 = None
+        timefig_P = None
+
     return ddk.App(
         [
             ddk.Header(
@@ -71,12 +77,28 @@ def serve_layout():
             )]),
             html.Br(),
             ddk.Card(
-                width=50,                
+                width=100,                
                 children=[
-                ddk.CardHeader(title="Timeseries Temperature Analysis"),
+                ddk.CardHeader(title="Timeseries Temperature 0 Analysis"),
                 ddk.Graph(
                     id="graph-timeseries_T1",
                     figure=timefig_T1,
+            )]),
+            ddk.Card(
+                width=100,                
+                children=[
+                ddk.CardHeader(title="Timeseries Temperature 1 Analysis"),
+                ddk.Graph(
+                    id="graph-timeseries_T2",
+                    figure=timefig_T2,
+            )]),
+            ddk.Card(
+                width=100,                
+                children=[
+                ddk.CardHeader(title="Timeseries Pressure Analysis"),
+                ddk.Graph(
+                    id="graph-timeseries_P",
+                    figure=timefig_P,
             )]),
         ],
         theme=theme,
