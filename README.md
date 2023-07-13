@@ -4,3 +4,5 @@ This application demonstrates how to refresh backend data periodically on a sche
 
 - To run this application locally, you must run a redis server locally.
 - To deploy this application, you must create and link a redis database via the App Manager UI.
+
+Also backup to github
