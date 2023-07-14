@@ -3,7 +3,7 @@ import json
 import redis
 import pandas as pd
 
-from dash import Dash, html
+from dash import Dash, html, dcc
 import dash_design_kit as ddk
 import plotly.express as px
 
@@ -77,26 +77,47 @@ def serve_layout():
                     figure=locmap,
             )]),
             ddk.Card(
+                dcc.Tabs([
+                dcc.Tab(label='SST', children=[
+                    ddk.CardHeader(title="SST Timeseries Temperature 0 Analysis"),
+                    ddk.Graph(
+                        style={'height': '200px'},
+                        id="graph-timeseries_T1",
+                        figure=timefig_T1,
+                ),
+                    ddk.CardHeader(title="SST Timeseries Temperature 1 Analysis"),
+                    ddk.Graph(
+                        style={'height': '200px'},
+                        id="graph-timeseries_T2",
+                        figure=timefig_T2,
+                ),              
+                    ddk.CardHeader(title="SST Timeseries Pressure Analysis"),
+                    ddk.Graph(
+                        style={'height': '200px'},
+                        id="graph-timeseries_P",
+                        figure=timefig_P,
+                )]),
+                dcc.Tab(label='Bottom', children=[
+                    ddk.CardHeader(title="Bottom Timeseries Temperature 0 Analysis"),
+                    ddk.Graph(
+                        style={'height': '200px'},
+                        id="graph-timeseries_T1B",
+                        figure=timefig_T1,
+                ),
+                    ddk.CardHeader(title="Bottom Timeseries Temperature 1 Analysis"),
+                    ddk.Graph(
+                        style={'height': '200px'},
+                        id="graph-timeseries_T2B",
+                        figure=timefig_T2,
+                ),              
+                    ddk.CardHeader(title="Bottom Timeseries Pressure Analysis"),
+                    ddk.Graph(
+                        style={'height': '200px'},
+                        id="graph-timeseries_PB",
+                        figure=timefig_P,
+                )])]                ),
                 width=50,                
-                children=[
-                ddk.CardHeader(title="Timeseries Temperature 0 Analysis"),
-                ddk.Graph(
-                    style={'height': '200px'},
-                    id="graph-timeseries_T1",
-                    figure=timefig_T1,
             ),
-                ddk.CardHeader(title="Timeseries Temperature 1 Analysis"),
-                ddk.Graph(
-                    style={'height': '200px'},
-                    id="graph-timeseries_T2",
-                    figure=timefig_T2,
-            ),              
-                ddk.CardHeader(title="Timeseries Pressure Analysis"),
-                ddk.Graph(
-                    style={'height': '200px'},
-                    id="graph-timeseries_P",
-                    figure=timefig_P,
-            )]),
         ],
         theme=theme,
     )
