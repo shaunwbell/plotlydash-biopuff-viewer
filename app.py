@@ -6,8 +6,12 @@ import pandas as pd
 from dash import Dash, html, dcc
 import dash_design_kit as ddk
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 import db
+import fixed_data as fxd
+import constants
 
 import tasks
 from theme import theme
@@ -38,10 +42,22 @@ def serve_layout():
 
         return fig
 
-    def time_figures(df,varname='Temp_DegC_0'):
-        fig = px.scatter(df, x='time', y=varname,
-                     hover_name="trajectory_id", color='trajectory_id'
-                     )
+    def time_figures(df,id_var='trajectory_id'):
+        fig = make_subplots(rows=3, cols=1,
+                shared_xaxes=True,
+                vertical_spacing=0.05)
+        colorwheel=["red","blue"]
+        for group,gdata in df.groupby(id_var):
+            color=colorwheel.pop()
+            fig.add_trace(go.Scatter(x=gdata['time'], y=gdata['Temp_DegC_0'],
+                        mode='markers', name=group, marker={"color":color},legendgroup=group
+                        ),row=1,col=1)    
+            fig.add_trace(go.Scatter(x=gdata['time'], y=gdata['Temp_DegC_1'],
+                        mode='markers', name=group, marker={"color":color},legendgroup=group,showlegend=False
+                        ),row=2,col=1)      
+            fig.add_trace(go.Scatter(x=gdata['time'], y=gdata['Pressure_Bar'],
+                        mode='markers', name=group, marker={"color":color},legendgroup=group,showlegend=False
+                        ),row=3,col=1)  
         return fig
 
     try:
@@ -50,14 +66,23 @@ def serve_layout():
     except:
         locmap = empty_figures()
 
+    #sst
     try:
-        timefig_T1 = time_figures(new_df,varname='Temp_DegC_0')
-        timefig_T2 = time_figures(new_df,varname='Temp_DegC_1')
-        timefig_P = time_figures(new_df,varname='Pressure_Bar')
+        timefig_T1 = time_figures(new_df)
     except:
-        timefig_T1 = None
-        timefig_T2 = None
-        timefig_P = None
+        timefig_T1 = time_figures(new_df)
+
+    ##bottom
+    try:
+        new_bdf = fxd.get_fixed_ts(constants.erddap_url,constants.erddap_datasetID[1])
+    except:
+        new_bdf = pd.DataFrame()
+
+    try:
+        timefig_bT1 = time_figures(new_bdf,id_var='timeseries_id')
+    except:
+        timefig_bT1 = None
+
 
     return ddk.App(
         [
@@ -81,40 +106,16 @@ def serve_layout():
                 dcc.Tab(label='SST', children=[
                     ddk.CardHeader(title="SST Timeseries Temperature 0 Analysis"),
                     ddk.Graph(
-                        style={'height': '200px'},
+                        style={'height': '600px'},
                         id="graph-timeseries_T1",
                         figure=timefig_T1,
-                ),
-                    ddk.CardHeader(title="SST Timeseries Temperature 1 Analysis"),
-                    ddk.Graph(
-                        style={'height': '200px'},
-                        id="graph-timeseries_T2",
-                        figure=timefig_T2,
-                ),              
-                    ddk.CardHeader(title="SST Timeseries Pressure Analysis"),
-                    ddk.Graph(
-                        style={'height': '200px'},
-                        id="graph-timeseries_P",
-                        figure=timefig_P,
                 )]),
                 dcc.Tab(label='Bottom', children=[
                     ddk.CardHeader(title="Bottom Timeseries Temperature 0 Analysis"),
                     ddk.Graph(
-                        style={'height': '200px'},
+                        style={'height': '600px'},
                         id="graph-timeseries_T1B",
-                        figure=timefig_T1,
-                ),
-                    ddk.CardHeader(title="Bottom Timeseries Temperature 1 Analysis"),
-                    ddk.Graph(
-                        style={'height': '200px'},
-                        id="graph-timeseries_T2B",
-                        figure=timefig_T2,
-                ),              
-                    ddk.CardHeader(title="Bottom Timeseries Pressure Analysis"),
-                    ddk.Graph(
-                        style={'height': '200px'},
-                        id="graph-timeseries_PB",
-                        figure=timefig_P,
+                        figure=timefig_bT1,
                 )])]                ),
                 width=50,                
             ),
