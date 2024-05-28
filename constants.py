@@ -6,7 +6,7 @@ import os
 from urllib.parse import urlparse
 
 erddap_url = 'http://ecofoci-field.pmel.noaa.gov:8080/erddap'
-erddap_datasetID = ['2023_KU_BioPUFFS_surfacedata','2023_KU_BioPUFFS_bottomdata']
+erddap_datasetID = ['Active_BioPUFFS_surfacedata','Active_BioPUFFS_bottomdata']
 
 meta_variables = ['longitude', 'latitude', 'trajectory_id', 'time',]
 surface_variables = ['Temp_DegC_0','Temp_DegC_1','Pressure_Bar',]
