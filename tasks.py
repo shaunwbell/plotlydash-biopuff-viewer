@@ -136,7 +136,7 @@ def append_new_observations():
         df.to_sql(constants.data_table, constants.postgres_engine, if_exists='append', index=False, chunksize=1500, method='multi')
 
     # These are small and should be made to match the data in the database, so replace them
-    df = db.get_data(None)
+    df = db.get_data()
     logger.info('Preparing sub-sets for locations and counts.')
     locations_df = df.groupby('trajectory_id', as_index=False).last()
 
@@ -151,7 +151,7 @@ def append_new_observations():
     
 @celery_app.task
 def counts_and_location():
-    df = db.get_data(None)
+    df = db.get_data()
     logger.info('Preparing sub-sets for locations and counts.')
     locations_df = df.groupby('trajectory_id', as_index=False).last()
 
