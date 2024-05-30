@@ -5,7 +5,7 @@ from sqlalchemy.pool import NullPool
 import os
 from urllib.parse import urlparse
 
-erddap_url = 'http://ecofoci-field.pmel.noaa.gov:8080/erddap'
+erddap_url = 'http://ecofoci-field.pmel.noaa.gov:8082/erddap'
 erddap_datasetID = ['Active_BioPUFFS_surfacedata','Active_BioPUFFS_bottomdata']
 
 meta_variables = ['longitude', 'latitude', 'trajectory_id', 'time',]
