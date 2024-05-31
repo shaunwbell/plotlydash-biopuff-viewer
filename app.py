@@ -47,7 +47,7 @@ def serve_layout():
         fig = make_subplots(rows=3, cols=1,
                 shared_xaxes=True,
                 vertical_spacing=0.05)
-        colorwheel=["red","blue"]
+        colorwheel=["black","blue","red","black"] #total number of units in database
         for group,gdata in df.groupby(id_var):
             color=colorwheel.pop()
             fig.add_trace(go.Scatter(x=gdata['time'], y=gdata['Temp_DegC_0'],
