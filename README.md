@@ -1,9 +1,8 @@
-### Refresh Data Periodically via the built-in Redis Database
+## NRT Viewer of EcoFOCI BIOPUFS (Popup Floats)
 
-This application demonstrates how to refresh backend data periodically on a schedule using Celery and Redis.
+Rely's on Enterprise Plotly-Dash 
 
-- To run this application locally, you must run a redis server locally.
-- To deploy this application, you must create and link a redis database via the App Manager UI.
+Refresh Data Periodically via the built-in Redis Database and a celery task
 
 Also backup to github
 

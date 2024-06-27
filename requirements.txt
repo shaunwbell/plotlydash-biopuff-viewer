@@ -1,8 +1,9 @@
-celery==4.4.7
-dash-design-kit==1.6.8
-dash==2.3.1
-gunicorn==20.0.4
-pandas==1.1.5
-pg8000==1.16.5
-redis==3.5.3
-SQLAlchemy==1.3.20
+#python==3.8.x #dash 5
+celery
+dash-design-kit
+dash
+gunicorn
+pandas
+pg8000
+redis
+SQLAlchemy
